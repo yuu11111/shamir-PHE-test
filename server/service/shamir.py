@@ -1,6 +1,7 @@
 import logging
 from Crypto.Protocol.SecretSharing import Shamir
 from phe import paillier
+import time
 
 # ロガーの設定
 logging.basicConfig(level=logging.DEBUG)
@@ -45,7 +46,8 @@ def encrypt_shares(shares: list[tuple[int, int, str]]) -> list[tuple[int, int, s
     encrypted_shares = []
     for i, idx, s in shares:
         encrypted_s = public_key.encrypt(int(s, 16))
-        encrypted_shares.append((i, idx, encrypted_s.ciphertext()))
+        encrypted_shares.append((i, idx, str(encrypted_s.ciphertext())))  # 文字列として保存
+        logger.debug(f"Encrypted share: (i={i}, idx={idx}, s={encrypted_s.ciphertext()})")
     return encrypted_shares
 
 
@@ -55,8 +57,10 @@ def decrypt_shares(encrypted_shares: list[tuple[int, int, str]]) -> list[tuple[i
     """
     decrypted_shares = []
     for i, idx, s in encrypted_shares:
+        logger.debug(f"Decrypting share: (i={i}, idx={idx}, s={s})")
         decrypted_s = private_key.decrypt(paillier.EncryptedNumber(public_key, int(s)))
-        decrypted_shares.append((i, idx, format(decrypted_s, 'x')))  
+        decrypted_shares.append((i, idx, format(decrypted_s, 'x')))
+        logger.debug(f"Decrypted share: (i={i}, idx={idx}, s={format(decrypted_s, 'x')})")
     return decrypted_shares
 
 
@@ -69,6 +73,8 @@ def recover_shamir_keys(shares: list[tuple[int, int, str]]) -> str:
 
     for i, idx, s in shares:
         logger.debug(f"Recovering share: {i}, {idx}, {s}")
+        if not all(c in '0123456789abcdefABCDEF' for c in s):
+            raise ValueError(f"Invalid hex value: {s}")
         if i == 0:
             s1.append((idx, bytes.fromhex(s)))
             continue

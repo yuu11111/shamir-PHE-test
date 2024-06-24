@@ -6,11 +6,12 @@ from server.service.shamir import generate_shamir_keys, recover_shamir_keys, enc
 from fastapi.responses import FileResponse
 import os
 import logging
+import time
 
 app = FastAPI()
 
 # ログ設定
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)  # Changed to DEBUG
 logger = logging.getLogger(__name__)
 
 class KeyShares(BaseModel):
@@ -37,6 +38,7 @@ def generate_keys_phe():
     try:
         shamir_keys = generate_shamir_keys(key)
         encrypted_shamir_keys = encrypt_shares(shamir_keys)
+        logger.debug(f"Encrypted Shamir keys: {encrypted_shamir_keys}")
         return {"original_key": key, "shamir_keys": encrypted_shamir_keys}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
