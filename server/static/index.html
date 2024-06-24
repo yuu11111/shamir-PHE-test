@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Shamir Secret Sharing</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+    <div
+      class="bg-white p-8 rounded shadow-md w-full max-w-4xl min-h-64 flex flex-col items-center justify-center gap-4"
+    >
+      <h1 class="text-2xl font-bold mb-4">Shamir Secret Sharing</h1>
+      <button
+        id="generate-key-button"
+        class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mb-4"
+      >
+        Generate Key (Without PHE)
+      </button>
+      <button
+        id="generate-key-phe-button"
+        class="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded mb-4"
+      >
+        Generate Key (With PHE) wait 5sec
+      </button>
+      <div id="original-key-container" class="mb-4 hidden w-full">
+        <p class="font-bold">Original Key:</p>
+        <p id="original-key" class="bg-gray-200 p-2 overflow-hidden overflow-ellipsis rounded"></p>
+      </div>
+      <div id="shamir-keys-container" class="flex flex-col gap-2 w-full hidden">
+        <label class="font-bold">Shamir Keys:</label>
+      </div>
+      <button
+        id="recover-key-button"
+        class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-4 hidden"
+      >
+        Recover Key
+      </button>
+    </div>
+
+    <script>
+      async function generateKeys(endpoint) {
+        const response = await fetch(endpoint, {
+          method: "POST",
+        });
+        const data = await response.json();
+
+        document
+          .getElementById("original-key-container")
+          .classList.remove("hidden");
+
+        document.getElementById("original-key").innerText = data.original_key;
+
+        const shamirKeysContainer = document.getElementById("shamir-keys-container");
+        shamirKeysContainer.innerHTML = '<label class="font-bold">Shamir Keys:</label>';
+
+        data.shamir_keys.forEach((key, index) => {
+          const inputContainer = document.createElement("div");
+          inputContainer.classList.add("flex", "items-center");
+
+          const input = document.createElement("input");
+          input.type = "text";
+          input.value = `${key[0]} ${key[1]} ${key[2]}`;
+          input.classList.add(
+            "flex-1",
+            "bg-gray-200",
+            "p-2",
+            "rounded",
+            "mr-2"
+          );
+
+          inputContainer.appendChild(input);
+          shamirKeysContainer.appendChild(inputContainer);
+        });
+
+        document
+          .getElementById("shamir-keys-container")
+          .classList.remove("hidden");
+        document
+          .getElementById("recover-key-button")
+          .classList.remove("hidden");
+      }
+
+      document
+        .getElementById("generate-key-button")
+        .addEventListener("click", () => generateKeys("/generate_shamir_keys"));
+
+      document
+        .getElementById("generate-key-phe-button")
+        .addEventListener("click", () => generateKeys("/generate_shamir_keys_phe"));
+
+      document
+        .getElementById("recover-key-button")
+        .addEventListener("click", async () => {
+          const inputs = document.querySelectorAll(
+            "#shamir-keys-container input"
+          );
+          const shares = Array.from(inputs).map((input) => {
+            if (input.value === "") {
+              return null;
+            }
+
+            const [i, idx, s] = input.value.split(" ");
+            return [parseInt(i), parseInt(idx), s];
+          }).filter((share) => share !== null);
+
+          const usePhe = document.getElementById("generate-key-phe-button").classList.contains("hidden");
+
+          const endpoint = usePhe ? "/recover_shamir_keys_phe" : "/recover_shamir_keys";
+
+          const response = await fetch(endpoint, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ shares }),
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            console.error("Error recovering key:", errorData);
+            alert(`Error: ${errorData.detail}`);
+            return;
+          }
+
+          const data = await response.json();
+          alert(`Recovered Key: ${data.recovered_key}`);
+        });
+    </script>
+  </body>
+</html>
