@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import List, Tuple
 from server.service.symbol import generate_new_private_key
-from server.service.shamir import generate_shamir_keys, recover_shamir_keys, encrypt_shares, recover_shamir_keys_phe
+from server.service.shamir import generate_shamir_keys, recover_shamir_keys, encrypt_shares, decrypt_shares, recover_shamir_keys_phe, generate_shamir_keys_phe
 from fastapi.responses import FileResponse
 import os
 import logging
@@ -36,7 +36,7 @@ def generate_keys():
 def generate_keys_phe():
     key = generate_new_private_key()
     try:
-        shamir_keys = generate_shamir_keys(key)
+        shamir_keys = generate_shamir_keys_phe(key)
         encrypted_shamir_keys = encrypt_shares(shamir_keys)
         logger.debug(f"Encrypted Shamir keys: {encrypted_shamir_keys}")
         return {"original_key": key, "shamir_keys": encrypted_shamir_keys}
@@ -61,7 +61,8 @@ def recover_keys_phe(key_shares: KeySharesPHE):
         logger.info(f"Received encrypted shares: {key_shares.shares}")
         for share in key_shares.shares:
             logger.debug(f"Share: {share}")
-        recovered_key = recover_shamir_keys_phe(key_shares.shares)
+        decrypted_shares = decrypt_shares(key_shares.shares)
+        recovered_key = recover_shamir_keys_phe(decrypted_shares)
         return {"recovered_key": recovered_key}
     except Exception as e:
         logger.error(f"Error recovering key with PHE: {e}")

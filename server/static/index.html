@@ -104,7 +104,7 @@
             return [parseInt(i), parseInt(idx), s];
           }).filter((share) => share !== null);
 
-          const usePhe = document.getElementById("generate-key-phe-button").classList.contains("hidden");
+          const usePhe = !document.getElementById("generate-key-phe-button").classList.contains("hidden");
 
           const endpoint = usePhe ? "/recover_shamir_keys_phe" : "/recover_shamir_keys";
 
